@@ -1,0 +1,11 @@
+--- a/node_modules/winston/dist/winston.js	2021-08-26 22:26:24.296000000 -0600
++++ b/node_modules/winston/dist/winston.js	2021-09-15 23:35:13.136034453 -0600
+@@ -6,7 +6,7 @@
+  */
+ 'use strict';
+ 
+-var logform = require('logform');
++import * as logform from 'logform/dist/browser.js';
+ 
+ var _require = require('./winston/common'),
+     warn = _require.warn;

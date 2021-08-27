@@ -51,3 +51,5 @@ config/development.json
 CMakeLists.txt.user*
 
 /dist
+# Parcel's cache
+/.parcel-cache

@@ -1,0 +1,95 @@
+From 2ae094e7ad43d9137fafe84a36eac3e9bf0a8245 Mon Sep 17 00:00:00 2001
+From: liushuyu <liushuyu011@gmail.com>
+Date: Wed, 15 Sep 2021 22:49:40 -0600
+Subject: [PATCH] server: make it bundler friendly
+
+---
+ src/server.ts | 49 ++++++++++++++++++++-----------------------------
+ 1 file changed, 20 insertions(+), 29 deletions(-)
+
+diff --git a/src/server.ts b/src/server.ts
+index bc63ae7..7cf8825 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -1,5 +1,7 @@
+ // Check for environmental variables.
+-require('checkenv').check();
++const checkenv = require('checkenv');
++checkenv.setConfig(require('../env.json'));
++checkenv.check();
+ 
+ import discord = require('discord.js');
+ import path = require('path');
+@@ -9,6 +11,10 @@ import logger from './logging';
+ import state from './state';
+ import * as data from './data';
+ import { IModule, ITrigger } from './models/interfaces';
++// Parcel glob imports
++import commands from './commands/*.ts';
++import triggers from './triggers/*.ts';
++import responses from './responses/*.json';
+ 
+ interface IModuleMap {
+   [name: string]: IModule;
+@@ -233,37 +239,16 @@ client.on('message', message => {
+ });
+ 
+ // Cache all command modules.
+-cachedModules = {};
+-fs.readdirSync('./commands/').forEach(function (file) {
+-  // Load the module if it's a script.
+-  if (path.extname(file) === '.js') {
+-    if (file.includes('.disabled')) {
+-      logger.info(`Did not load disabled module: ${file}`);
+-    } else {
+-      const moduleName = path.basename(file, '.js').toLowerCase();
+-      logger.info(`Loaded module: ${moduleName} from ${file}`);
+-      cachedModules[moduleName] = require(`./commands/${file}`);
+-    }
+-  }
++cachedModules = commands;
++Object.entries(commands).forEach(function (command) {
++  logger.info(`Loaded command: ${command[0]}`);
+ });
+ 
+ // Cache all triggers.
+ cachedTriggers = [];
+-fs.readdirSync('./triggers/').forEach(function (file) {
+-  // Load the module if it's a script.
+-  if (path.extname(file) === '.js') {
+-    if (file.includes('.disabled')) {
+-      logger.info(`Did not load disabled trigger: ${file}`);
+-    } else {
+-      const moduleName = path.basename(file, '.js').toLowerCase();
+-      logger.info(`Loaded trigger: ${moduleName} from ${file}`);
+-      try {
+-        cachedTriggers.push(require(`./triggers/${file}`));
+-      } catch (e) {
+-        logger.error(`Could not load trigger ${moduleName}: ${e}`);
+-      }
+-    }
+-  }
++Object.entries(triggers).forEach((trigger: [string, ITrigger]) => {
++  cachedTriggers.push(trigger[1]);
++  logger.info(`Loaded trigger: ${trigger[0]}`);
+ });
+ 
+ data.readWarnings();
+@@ -271,7 +256,13 @@ data.readBans();
+ 
+ // Load custom responses
+ if (process.env.DATA_CUSTOM_RESPONSES) {
+-  data.readCustomResponses();
++  // Load the responses file into the responses variable.
++  state.responses = responses[process.env.TENANT];
++  if (!state.responses) {
++    logger.error(`Failed to load ${process.env.TENANT} from cache! Custom responses are disabled.`);
++  } else {
++    logger.debug(`Loaded ${process.env.TENANT} responses from cache.`);
++  }
+ }
+ 
+ client.login(process.env.DISCORD_LOGIN_TOKEN);
+-- 
+2.33.0
+

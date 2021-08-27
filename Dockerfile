@@ -4,9 +4,10 @@ FROM node:16-alpine AS build
 WORKDIR /usr/src/app
 
 # Install app dependencies and add source files
-COPY package.json yarn.lock tsconfig.json ./
-COPY src/ ./src 
-RUN yarn install && yarn build && rm -f dist/*.map
+COPY package.json yarn.lock env.json bundle.sh .parcelrc ./
+COPY src/ ./src
+COPY patches/ ./patches
+RUN apk add python3 build-base && yarn install && sh bundle.sh
 
 # Second stage
 FROM node:16-alpine
@@ -15,9 +16,6 @@ WORKDIR /usr/src/app
 
 # Copy artifacts
 COPY --from=build /usr/src/app/dist/ ./
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY env.json src/responses.json ./
-COPY src/responses ./responses/
 
 RUN addgroup -S app -g 50000 && \
     adduser -S -g app -u 50000 app && \
